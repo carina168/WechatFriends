@@ -9,6 +9,5 @@ if __name__ == '__main__':
     friends_info.sex_viewer()
     friends_info.show_friends_city_by_bar()
     friends_info.show_friends_provinces_by_map()
-
-
-
+    friends_info.show_friends_signatures_wordcloud()
+    friends_info.show_special_friends_by_bar()

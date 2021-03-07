@@ -1,13 +1,12 @@
-
 import itchat
 from pyecharts import Pie, Bar, Map
 from Wechat_friends.friends_info.data_source import DATASOURCE
-
+from wordcloud import STOPWORDS, WordCloud
+import matplotlib.pyplot as plt
 
 
 class FriendInformation:
     def __init__(self):
-
         self.Friends = DATASOURCE()
         # 登录wechat账号
         itchat.auto_login(hotReload=True)
@@ -39,7 +38,49 @@ class FriendInformation:
         key = list(provinces_list.keys())
         value = list(provinces_list.values())
 
-        china_map = Map("我的微信好友分布", "@OuCuirong")
+        china_map = Map("我的微信好友分布", "@OuCuirong", width=1200, height=600, title_pos='center')
         china_map.add("", key, value, maptype='china', is_visualmap=True, visual_text_color='#000')
         china_map.render('../view/china.html')
 
+    def show_friends_signatures_wordcloud(self):
+        signatures_list = self.Friends.get_friends_signature()
+        # 设置屏蔽词，去除个性签名中的表情、特殊符号等
+        stopwords = STOPWORDS.copy()
+        stopwords.add('span')
+        stopwords.add('class')
+        stopwords.add('emoji')
+        stopwords.add('emoji1f334')
+        stopwords.add('emoji1f388')
+        stopwords.add('emoji1f33a')
+        stopwords.add('emoji1f33c')
+        stopwords.add('emoji1f633')
+
+        # # 导入背景图
+        # path = "../data/bc.png"
+        # bg_image = plt.imread(path)
+
+        # 设置词云参数，参数分别表示：画布宽高、背景颜色、背景图形状、字体、屏蔽词、最大词的字体大小
+        wc = WordCloud(width=1024,
+                       height=768,
+                       background_color='white',
+                       stopwords=stopwords,
+                       max_font_size=400,
+                       random_state=50,
+                       font_path='STKAITI.TTF')
+        # 将分词后数据传入云图
+        wc.generate_from_text(signatures_list)
+        plt.imshow(wc)  # 绘制图像
+        plt.axis('off')  # 不显示坐标轴
+        # 保存结果到本地
+        wc.to_file('../view/个性签名词云图.jpg')
+        plt.show()
+
+    def show_special_friends_by_bar(self):
+        special_friends_list = self.Friends.get_special_friends()
+
+        key = list(special_friends_list.keys())
+        value = list(special_friends_list.values())
+
+        bar = Bar("特殊好友分析", title_pos='center')
+        bar.add('', key, value, is_visualmap=True, is_label_show=True)
+        bar.render('../view/特殊好友分析.html')

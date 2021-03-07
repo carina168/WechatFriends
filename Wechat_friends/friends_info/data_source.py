@@ -2,6 +2,7 @@ import json
 import itchat
 import re
 from collections import Counter
+import jieba
 
 
 class DATASOURCE:
@@ -78,10 +79,8 @@ class DATASOURCE:
             city_list.append(city)
         # 去除微信好友中city信息为空的空白字符
         filter_city_list = filter(None, city_list)
-        city_counter = Counter(filter_city_list)
-        for key in list(city_counter.keys()):
-            if city_counter.get(key) < 5:  # 人数小于3的city
-                del city_counter[key]
+        city_counter = dict(Counter(filter_city_list).most_common(10))  # top10
+
         print(city_counter)
         return city_counter
 
@@ -90,9 +89,45 @@ class DATASOURCE:
         provinces = []
         for f in self.friends:
             province = f['Province']
-            provinces.append(province)
+
+            res = re.compile(u'[\u4e00-\u9fa5]')  # 清除非china省份的省份名
+            provinces_1 = res.sub('', province)
+
+            provinces.append(provinces_1)
 
         filter_provinces = filter(None, provinces)  # 去除列表中有些微信好友没填省份信息的空字符
+        # provinces_1 = re.findall(u'[\u4e00-\u9fa5]', filter_provinces)
+
         provinces_count = Counter(filter_provinces)
         print(provinces_count)
         return provinces_count
+
+    def get_friends_signature(self):
+        signatures = []
+        for f in self.friends:
+            signature = f['Signature']
+            signatures.append(signature)
+
+        split = jieba.cut(str(signatures), cut_all=False)   # False精准模式分词、True全模式分词
+        words = ' '.join(split)  # 以空格进行拼接
+        return words
+
+    def get_special_friends(self):
+        # 获取特殊好友
+        star_num = 0  # 星标朋友
+        deny_see_num = 0  # 不让他看我的朋友圈
+        no_see_num = 0  # 不看他的朋友圈
+        for f in self.friends:
+            if f['StarFriend'] == 1:
+                star_num += 1
+            elif f['ContactFlag'] in [259, 33027, 65795]:
+                deny_see_num += 1
+            elif f['ContactFlag'] in [65539, 65795, 65537, 98307]:
+                no_see_num += 1
+
+        print('星标好友：', star_num)
+        print('不让他看我的朋友圈：', deny_see_num)
+        print('不看他的朋友圈：', no_see_num)
+
+        special_firends_dict = {'星标好友': star_num, '不让他看我的朋友圈': deny_see_num, '不看他的朋友圈': no_see_num}
+        return special_firends_dict
