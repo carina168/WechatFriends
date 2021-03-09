@@ -106,10 +106,20 @@ class DATASOURCE:
         signatures = []
         for f in self.friends:
             signature = f['Signature']
-            signatures.append(signature)
+            sign = str(signature).strip()
+            sub_str = re.sub(u"([^\u4e00-\u9fa5\u0030-\u0039\u0041-\u005a\u0061-\u007a])", "", sign)
 
-        split = jieba.cut(str(signatures), cut_all=False)   # False精准模式分词、True全模式分词
-        words = ' '.join(split)  # 以空格进行拼接
+            signatures.append(sub_str)
+        split_words = jieba.cut(str(signatures))   # False精准模式分词、True全模式分词
+        words = {}
+        for f in split_words:
+            if f is not None and f != "":
+                if f not in words:
+                    words[f] = 1
+                else:
+                    words[f] += 1
+
+        print(words)
         return words
 
     def get_special_friends(self):

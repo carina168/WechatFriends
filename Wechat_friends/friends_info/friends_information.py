@@ -1,10 +1,7 @@
 import itchat
-from pyecharts.charts import Pie, Bar, Map
-from pyecharts.faker import Faker
-
+from pyecharts.charts import Pie, Bar, Map, WordCloud
+from pyecharts.globals import SymbolType
 from Wechat_friends.friends_info.data_source import DATASOURCE
-from wordcloud import STOPWORDS, WordCloud
-import matplotlib.pyplot as plt
 from pyecharts import options as opts
 
 
@@ -70,43 +67,34 @@ class FriendInformation:
         key = list(provinces_list.keys())
         value = list(provinces_list.values())
 
-        china_map = Map("我的微信好友分布", "@OuCuirong", width=1200, height=600, title_pos='center')
-        china_map.add("", key, value, maptype='china', is_visualmap=True, visual_text_color='#000')
+        # china_map = Map("我的微信好友分布", "@", width=1200, height=600, title_pos='center')
+        # china_map.add("", key, value, maptype='china', is_visualmap=True, visual_text_color='#000')
+
+        china_map = Map()
+        china_map.add(series_name="省份",
+                      data_pair=[list(z) for z in zip(key, value)],
+                      maptype="china")
+        china_map.set_global_opts(title_opts=opts.TitleOpts(title="我的微信好友分布", pos_left="center"),
+                                  visualmap_opts=opts.VisualMapOpts(max_=200, is_piecewise=True))
 
         china_map.render('../view/china.html')
+        return china_map
 
     def show_friends_signatures_wordcloud(self):
-        signatures_list = self.Friends.get_friends_signature()
-        # 设置屏蔽词，去除个性签名中的表情、特殊符号等
-        stopwords = STOPWORDS.copy()
-        stopwords.add('span')
-        stopwords.add('class')
-        stopwords.add('emoji')
-        stopwords.add('emoji1f334')
-        stopwords.add('emoji1f388')
-        stopwords.add('emoji1f33a')
-        stopwords.add('emoji1f33c')
-        stopwords.add('emoji1f633')
+        signatures_dict = self.Friends.get_friends_signature()
+        key = list(signatures_dict.keys())
+        value = list(signatures_dict.values())
+        wc = WordCloud()
+        wc.add(series_name="",
+               data_pair=[list(z) for z in zip(key, value)],
+               word_size_range=[50, 100],
+               shape=SymbolType.DIAMOND
+               )
+        wc.set_global_opts(title_opts=opts.TitleOpts(title="个性签名词云分析"))
+        wc.render("../view/个性签名词云图.html")
+        return wc
 
-        # # 导入背景图
-        # path = "../data/bc.png"
-        # bg_image = plt.imread(path)
 
-        # 设置词云参数，参数分别表示：画布宽高、背景颜色、背景图形状、字体、屏蔽词、最大词的字体大小
-        wc = WordCloud(width=1024,
-                       height=768,
-                       background_color='white',
-                       stopwords=stopwords,
-                       max_font_size=400,
-                       random_state=50,
-                       font_path='STKAITI.TTF')
-        # 将分词后数据传入云图
-        wc.generate_from_text(signatures_list)
-        plt.imshow(wc)  # 绘制图像
-        plt.axis('off')  # 不显示坐标轴
-        # 保存结果到本地
-        wc.to_file('../view/个性签名词云图.jpg')
-        plt.show()
 
     def show_special_friends_by_bar(self):
         special_friends_list = self.Friends.get_special_friends()
@@ -114,7 +102,16 @@ class FriendInformation:
         key = list(special_friends_list.keys())
         value = list(special_friends_list.values())
 
-        bar = Bar("特殊好友分析", title_pos='center')
-        bar.add('', key, value, is_visualmap=True, is_label_show=True)
+        # bar = Bar("特殊好友分析")
+        # bar.add('', key, value, is_visualmap=True, is_label_show=True)
+        bar = Bar()
+        bar.add_xaxis(key)
+        bar.add_yaxis("", value)
+        bar.set_global_opts(title_opts=opts.TitleOpts(title="特殊好友分析"),
+                            xaxis_opts=opts.AxisOpts(name='名好友类别', axislabel_opts=opts.LabelOpts(rotate=45)),
+                            yaxis_opts=opts.AxisOpts(name='占有人数'))
+        bar.set_series_opts(label_opts=opts.LabelOpts(is_show=True),
+                            markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(name="average", type_="average")]))
         bar.render('../view/特殊好友分析.html')
+        return bar
 
