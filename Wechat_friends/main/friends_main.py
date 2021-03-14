@@ -20,9 +20,6 @@ if __name__ == '__main__':
              )
     page.render(path)
 
-
-
-
     with open(path, "r+", encoding='utf-8') as html:
         html_bf = BeautifulSoup(html, "html.parser")  # 创建 beautifulsoup 对象，Beautiful Soup是python的一个库，最主要的功能是从网页抓取数据
         divs = html_bf.select('.chart-container')
