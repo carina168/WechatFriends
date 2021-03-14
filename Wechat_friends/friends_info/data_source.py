@@ -3,7 +3,7 @@ import itchat
 import re
 from collections import Counter
 import jieba
-
+from snownlp import SnowNLP
 
 class DATASOURCE:
 
@@ -11,12 +11,17 @@ class DATASOURCE:
 
         self.friends = []
         self.friends_num = 0
+        self.filter_signature_list = []
+        self.emotions_signature_total = 0
 
         # 获取好友数据
         self.get_friends()
 
         # 获取好友数量
         self.get_friends_num()
+
+        # 获取过滤后的好友个性签名
+        self.get_friends_filter_signature_list()
 
     def filter_data(self, desstr=None, restr=''):
         # 过滤表情
@@ -60,15 +65,15 @@ class DATASOURCE:
         return self.friends_num
 
     def get_friends_sex(self):
-        sex = {'Male': 0, 'Female': 0, 'Other': 0}
+        sex = {'男性-Male': 0, '女性-Female': 0, '未知-Other': 0}
 
         for f in self.friends:
             if f['Sex'] == 1:
-                sex['Male'] += 1
+                sex['男性-Male'] += 1
             elif f['Sex'] == 2:
-                sex['Female'] += 1
+                sex['女性-Female'] += 1
             else:
-                sex['Other'] += 1
+                sex['未知-Other'] += 1
         # print(" male:%d\n female:%d\n other:%d\n" % (sex['Male'], sex['Female'], sex['Other']))
         return sex
 
@@ -84,43 +89,68 @@ class DATASOURCE:
         print(city_counter)
         return city_counter
 
-
     def get_friends_province(self):
         provinces = []
         for f in self.friends:
             province = f['Province']
 
-            res = re.compile(u'[\u4e00-\u9fa5]')  # 清除非china省份的省份名
-            provinces_1 = res.sub('', province)
+            res = re.compile(r'[^\u4e00-\u9fa5]')  # 清除非china省份的省份名
+            provinces_1 = re.sub(res, '', province)
 
             provinces.append(provinces_1)
 
         filter_provinces = filter(None, provinces)  # 去除列表中有些微信好友没填省份信息的空字符
-        # provinces_1 = re.findall(u'[\u4e00-\u9fa5]', filter_provinces)
 
         provinces_count = Counter(filter_provinces)
         print(provinces_count)
         return provinces_count
 
-    def get_friends_signature(self):
-        signatures = []
+    def get_friends_filter_signature_list(self):
         for f in self.friends:
             signature = f['Signature']
-            sign = str(signature).strip()
-            sub_str = re.sub(u"([^\u4e00-\u9fa5\u0030-\u0039\u0041-\u005a\u0061-\u007a])", "", sign)
+            sign = signature.strip()
+            sub_str1 = re.sub(u"([^\u4e00-\u9fa5\u0030-\u0039\u0041-\u005a\u0061-\u007a])", "", sign)
+            sub_str = re.sub("[A-Za-z0-9\'\：\·\—\，\。\“ \”\n\u3000\？\、\'*\',\']", "", sub_str1)
+            if sub_str is not None:
+                self.filter_signature_list.append(sub_str)
 
-            signatures.append(sub_str)
-        split_words = jieba.cut(str(signatures))   # False精准模式分词、True全模式分词
-        words = {}
-        for f in split_words:
-            if f is not None and f != "":
-                if f not in words:
-                    words[f] = 1
-                else:
-                    words[f] += 1
+    def get_friends_signature(self):
+        sign_list = self.filter_signature_list
+        cut_words = ""
+        for f in sign_list:
+            seg_list = jieba.cut(f, cut_all=False)
+            cut_words += (" ".join(seg_list))
+        all_words = cut_words.split()
+        c = Counter()
+        for x in all_words:
+            if len(x) > 1 and x != '\r\n':
+                c[x] += 1
 
-        print(words)
-        return words
+        signatures_dict = {}
+        for (k, v) in c.items():
+            signatures_dict[k] = v
+
+        return signatures_dict
+
+    def get_signature_emotions(self):
+        signature_list = self.filter_signature_list
+        emotion_list = []
+        for f in signature_list:
+            if f is None or f == '':
+                continue
+            blob = SnowNLP(f).sentiments
+            emotion_list.append(blob)
+
+        # 情感分析
+        positive = len(list(i for i in emotion_list if i > 0.66))
+        normal = len(list(i for i in emotion_list if i <= 0.66 and i >= 0.33))
+        # normal = len(list(filter(lambda x:x>=0.33 and x<=0.66,emotions)))
+        negative = len(list(i for i in emotion_list if i < 0.33))
+
+        self.emotions_signature_total = positive + normal + negative
+
+        emotion_dict = {'积极-Positive': positive, '中性-Normal': normal, '消极-Negative': negative}
+        return emotion_dict
 
     def get_special_friends(self):
         # 获取特殊好友

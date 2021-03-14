@@ -26,11 +26,11 @@ class FriendInformation:
         pie.add(series_name='性别比例',
                 data_pair=[list(z) for z in zip(sex_keys, sex_value)],
                 radius=["30%", "70%"],
-                rosetype="area")
-        pie.set_global_opts(title_opts=opts.TitleOpts(title="好友性别比例", pos_left="center"),
+                rosetype='area')
+        pie.set_global_opts(title_opts=opts.TitleOpts(title="好友性别比例"),
                             legend_opts=opts.LegendOpts(is_show=False))
 
-        pie.set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {c}"))
+        pie.set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {d}%"))
 
         pie.render('../view/好友性别比例.html')
         return pie
@@ -67,15 +67,12 @@ class FriendInformation:
         key = list(provinces_list.keys())
         value = list(provinces_list.values())
 
-        # china_map = Map("我的微信好友分布", "@", width=1200, height=600, title_pos='center')
-        # china_map.add("", key, value, maptype='china', is_visualmap=True, visual_text_color='#000')
-
         china_map = Map()
         china_map.add(series_name="省份",
                       data_pair=[list(z) for z in zip(key, value)],
                       maptype="china")
-        china_map.set_global_opts(title_opts=opts.TitleOpts(title="我的微信好友分布", pos_left="center"),
-                                  visualmap_opts=opts.VisualMapOpts(max_=200, is_piecewise=True))
+        china_map.set_global_opts(title_opts=opts.TitleOpts(title="我的微信好友分布"),
+                                  visualmap_opts=opts.VisualMapOpts(min_=100, max_=300))
 
         china_map.render('../view/china.html')
         return china_map
@@ -87,14 +84,35 @@ class FriendInformation:
         wc = WordCloud()
         wc.add(series_name="",
                data_pair=[list(z) for z in zip(key, value)],
-               word_size_range=[50, 100],
-               shape=SymbolType.DIAMOND
+               word_size_range=[20, 70],
+               rotate_step=45,
+               word_gap=20
                )
-        wc.set_global_opts(title_opts=opts.TitleOpts(title="个性签名词云分析"))
+        wc.set_global_opts(title_opts=opts.TitleOpts(title="个性签名词云分析"),
+                           tooltip_opts=opts.TooltipOpts(is_show=True))
         wc.render("../view/个性签名词云图.html")
         return wc
 
+    def show_emotions_signature_by_pie(self):
+        emotions_dict = self.Friends.get_signature_emotions()
+        key = list(emotions_dict.keys())
+        value = list(emotions_dict.values())
 
+        pie = Pie()
+        pie.add(series_name='分析比例',
+                data_pair=[list(z) for z in zip(key, value)],
+                radius=["30%", "60%"],
+                rosetype="radius")
+        pie.set_global_opts(title_opts=opts.TitleOpts(title="个性签名情感分析",
+                                                      subtitle='总个性签名数量：%d' % self.Friends.emotions_signature_total,
+                                                      pos_left="center"),
+                            legend_opts=opts.LegendOpts(is_show=True,
+                                                        pos_top='bottom'))
+
+        pie.set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {c}\n ({d}%)"), is_label_show=True)
+
+        pie.render('../view/emotion.html')
+        return pie
 
     def show_special_friends_by_bar(self):
         special_friends_list = self.Friends.get_special_friends()
@@ -102,13 +120,11 @@ class FriendInformation:
         key = list(special_friends_list.keys())
         value = list(special_friends_list.values())
 
-        # bar = Bar("特殊好友分析")
-        # bar.add('', key, value, is_visualmap=True, is_label_show=True)
         bar = Bar()
         bar.add_xaxis(key)
         bar.add_yaxis("", value)
         bar.set_global_opts(title_opts=opts.TitleOpts(title="特殊好友分析"),
-                            xaxis_opts=opts.AxisOpts(name='名好友类别', axislabel_opts=opts.LabelOpts(rotate=45)),
+                            xaxis_opts=opts.AxisOpts(name='好友类别'),
                             yaxis_opts=opts.AxisOpts(name='占有人数'))
         bar.set_series_opts(label_opts=opts.LabelOpts(is_show=True),
                             markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(name="average", type_="average")]))
